@@ -1,0 +1,19 @@
+{
+  "name": "motymots",
+  "version": "1.0.0",
+  "description": "Jeu de mots enchaînés en multijoueur : fr, en, es, de.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test",
+    "dicts": "node scripts/build-dicts.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.22.0"
+  }
+}

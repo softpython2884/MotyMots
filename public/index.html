@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>MotyMots</title>
+  <meta name="description" content="Enchaîne les mots : le suivant commence par les deux dernières lettres du précédent. À plusieurs, en français, anglais, espagnol ou allemand.">
+  <meta name="theme-color" content="#ebe2cc">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/alfa-slab-one.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="top">
+    <h1 class="logo">Moty<mark>Mots</mark></h1>
+    <div class="top-r">
+      <span class="stamp" id="langTag" hidden><span id="langCode"></span><span class="long" id="langName"></span></span>
+      <button class="link" id="sound" type="button" aria-pressed="true">Son</button>
+    </div>
+  </header>
+
+  <main class="table" id="table" data-phase="lobby">
+    <div class="col">
+    <section class="card stage" id="stage" aria-labelledby="status">
+      <span class="tab">La table</span>
+
+      <div class="stage-head">
+        <h2 class="status" id="status">Connexion…</h2>
+        <div class="clock" id="clock" aria-hidden="true"></div>
+      </div>
+      <div class="bar" id="bar" aria-hidden="true"><i></i></div>
+
+      <!-- partie en cours -->
+      <div class="last" id="secLast" hidden>
+        <span class="eyebrow" id="lastLabel">Dernier mot</span>
+        <p class="word" id="lastWord"></p>
+      </div>
+
+      <div class="play" id="secPlay" hidden>
+        <form class="entry" id="entry" autocomplete="off">
+          <span class="sticker" id="sticker" aria-hidden="true"></span>
+          <label class="field">
+            <span class="sr" id="fieldLabel">Suite du mot</span>
+            <input id="word" name="word" type="text" enterkeyhint="send" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="24" disabled>
+          </label>
+          <button class="btn" id="go" type="submit" disabled>Jouer</button>
+        </form>
+        <div class="meters">
+          <div class="meter"><span class="eyebrow">Essais</span><span class="tries" id="tries"></span></div>
+          <div class="meter"><span class="eyebrow">Vies</span><span class="pips" id="lives"></span></div>
+        </div>
+      </div>
+
+      <!-- fin de partie -->
+      <div class="result" id="secResult" hidden>
+        <p class="champ" id="champ"></p>
+        <p class="verdict" id="verdict"></p>
+        <dl class="stats">
+          <div><dt>Mots enchaînés</dt><dd id="statWords"></dd></div>
+          <div><dt>Plus long mot</dt><dd id="statLongest"></dd></div>
+        </dl>
+      </div>
+
+      <!-- salon -->
+      <div class="lobby" id="secLobby" hidden>
+        <fieldset class="langs" id="langs">
+          <legend class="eyebrow">Langue du dictionnaire</legend>
+        </fieldset>
+      </div>
+
+      <!-- actions (selon que tu es assis ou non) -->
+      <form class="join" id="join" hidden>
+        <label class="eyebrow" for="name">Ton pseudo</label>
+        <div class="join-row">
+          <input id="name" name="name" type="text" maxlength="16" autocomplete="nickname" autocapitalize="words" spellcheck="false" placeholder="Comment on t’appelle ?">
+          <button class="btn" type="submit">Prendre place</button>
+        </div>
+        <p class="hint" id="joinHint"></p>
+      </form>
+
+      <div class="start" id="start" hidden>
+        <button class="btn" id="startBtn" type="button">Lancer la partie</button>
+        <p class="hint" id="startHint"></p>
+      </div>
+      <button class="btn alt" id="again" type="button" hidden>Nouvelle partie</button>
+
+      <p class="feed" id="feed" role="status" aria-live="polite"></p>
+
+      <details class="rules" id="rules">
+        <summary>Règles</summary>
+        <ol>
+          <li>Un mot s’affiche. Donne-en un qui commence par ses <b>deux dernières lettres</b>.</li>
+          <li><b>5 essais</b> et <b>30 secondes</b> par tour. Chaque mot refusé coûte un essai ; à court d’essais ou de temps, tu perds une vie.</li>
+          <li><b>3 vies.</b> Le dernier debout gagne. On peut s’asseoir à tout moment.</li>
+        </ol>
+        <p>Accents facultatifs. Un mot déjà joué est refusé. Un mot qui finit par des lettres où plus rien ne commence (<i>-nt</i> en français, par exemple) est une impasse : refusé, mais sans perdre d’essai.</p>
+      </details>
+    </section>
+
+    <section class="card chain" aria-labelledby="chainTab">
+      <span class="tab" id="chainTab">La chaîne <b id="chainCount"></b></span>
+      <ol class="words" id="words"></ol>
+      <p class="empty" id="wordsEmpty">Aucun mot pour l’instant.</p>
+    </section>
+    </div>
+
+    <aside class="card seats" aria-labelledby="seatsTab">
+      <span class="tab" id="seatsTab">À table <b id="seatCount"></b></span>
+      <ul class="people" id="people"></ul>
+      <p class="empty" id="peopleEmpty">Personne pour l’instant.</p>
+      <button class="link leave" id="leave" type="button" hidden>Quitter la table</button>
+    </aside>
+  </main>
+
+  <div class="net" id="net" role="alert" hidden>Connexion perdue. On réessaie…</div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
