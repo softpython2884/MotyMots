@@ -12,7 +12,7 @@ export const RULES = {
   minPlayers: 2,
   maxPlayers: 2000,
   minLen: 3,
-  minLink: 8, // une fin de mot doit ouvrir au moins N mots, sinon c'est une impasse
+  minLink: 30, // une fin de mot doit ouvrir au moins N mots, sinon c'est une impasse
   startMin: 200, // les lettres de départ doivent ouvrir au moins N mots
 };
 
@@ -105,6 +105,7 @@ export class Game {
     this.resetRound();
     this.dict = this.getDict(this.lang);
     this.prefix = randomStart(this.dict, this.r.startMin);
+    this.brk = true;
     this.queue = shuffle(crew);
     this.phase = 'playing';
     clearTimeout(this.overTimer);
@@ -133,7 +134,8 @@ export class Game {
     } else {
       const w = show(this.dict, key);
       this.used.add(key);
-      this.chain.push({ w, by: p.name });
+      this.chain.push({ w, by: p.name, brk: this.brk });
+      this.brk = false;
       this.prefix = key.slice(-LINK);
       p.words++;
       this.queue.push(this.queue.shift());
@@ -166,6 +168,7 @@ export class Game {
   resetRound() {
     for (const p of this.players.values()) Object.assign(p, { lives: this.r.lives, out: false, words: 0 });
     this.result = null;
+    this.brk = false; // vrai tant que les lettres imposées ont été tirées au sort plutôt que tirées du dernier mot
     this.chain = [];
     this.used = new Set();
     this.queue = [];
@@ -209,9 +212,18 @@ export class Game {
     else if (wasTurn) this.beginTurn();
   }
 
+  // Quelqu'un a raté (temps ou essais) : le suivant repart de nouvelles lettres, tirées au sort.
   afterQueueChange() {
-    if (this.queue.length <= 1) this.endGame();
-    else this.beginTurn();
+    if (this.queue.length <= 1) return this.endGame();
+    this.redraw();
+    this.beginTurn();
+  }
+
+  redraw() {
+    let next = this.prefix;
+    for (let i = 0; i < 10 && next === this.prefix; i++) next = randomStart(this.dict, this.r.startMin);
+    this.prefix = next;
+    this.brk = true;
   }
 
   endGame() {
@@ -263,7 +275,8 @@ export class Game {
       lang: this.lang,
       cfg: { lives: this.r.lives, tries: this.r.tries, turnMs: this.r.turnMs, minPlayers: this.r.minPlayers, link: LINK },
       prefix: this.prefix,
-      last: this.chain.slice(-40).map((c) => [c.w, c.by]),
+      fresh: this.brk,
+      last: this.chain.slice(-40).map((c) => [c.w, c.by, c.brk ? 1 : 0]),
       total: this.chain.length,
       turn: this.turn?.id ?? 0,
       left: this.left,

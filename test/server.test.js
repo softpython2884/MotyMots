@@ -4,19 +4,26 @@ import { spawn } from 'node:child_process';
 import http from 'node:http';
 import WebSocket from 'ws';
 import { loadDict, open } from '../server/dict.js';
+import { RULES } from '../server/game.js';
 
 let proc, base;
 
+async function spawnServer() {
+  const child = spawn('node', ['server/index.js'], { env: { ...process.env, PORT: '0' } });
+  const line = await new Promise((resolve) => child.stdout.once('data', (d) => resolve(String(d))));
+  return { child, port: line.match(/localhost:(\d+)/)[1] };
+}
+
 before(async () => {
-  proc = spawn('node', ['server/index.js'], { env: { ...process.env, PORT: '0' } });
-  const line = await new Promise((resolve) => proc.stdout.once('data', (d) => resolve(String(d))));
-  base = line.match(/localhost:(\d+)/)[1];
+  const srv = await spawnServer();
+  proc = srv.child;
+  base = srv.port;
 });
 after(() => proc.kill());
 
 // Client WebSocket minimal : garde le dernier instantané et attend des conditions.
-function client() {
-  const ws = new WebSocket(`ws://localhost:${base}/ws`);
+function client(port = base) {
+  const ws = new WebSocket(`ws://localhost:${port}/ws`);
   const c = { ws, snap: null, you: null, err: null, drafts: [], waiters: [] };
   ws.on('message', (d) => {
     const m = JSON.parse(d);
@@ -82,7 +89,7 @@ test('partie complète à deux joueurs réels', async () => {
 
   // un vrai mot du dictionnaire anglais qui commence par les bonnes lettres
   const en = loadDict('data/en.txt.gz');
-  const w = en.keys.split('\n').find((k) => k.startsWith(prefix) && k.length > 4 && open(en, k.slice(-2), 8));
+  const w = en.keys.split('\n').find((k) => k.startsWith(prefix) && k.length > 4 && open(en, k.slice(-2), RULES.minLink));
   me.send({ t: 'word', w });
   await other.until((c) => c.snap.ev?.k === 'word');
   assert.equal(other.snap.turn, other.you.id);
@@ -115,4 +122,28 @@ test('messages hostiles : le serveur reste debout', async () => {
   await d.until((x) => x.snap);
   assert.ok(['lobby', 'playing'].includes(d.snap.phase));
   d.ws.close();
+});
+
+test('mode mix : choisi au salon, la partie démarre avec les quatre langues', async () => {
+  const srv = await spawnServer(); // une table vierge, indépendante des autres tests
+  try {
+    const [a, b] = [await client(srv.port), await client(srv.port)];
+    a.send({ t: 'join', token: token(), name: 'Ana' });
+    b.send({ t: 'join', token: token(), name: 'Bob' });
+    await Promise.all([a, b].map((c) => c.until((x) => x.you && x.snap.players.length === 2)));
+    a.send({ t: 'lang', lang: 'mix' });
+    await b.until((c) => c.snap.lang === 'mix');
+    b.send({ t: 'start' });
+    await a.until((c) => c.snap.phase === 'playing');
+    assert.equal(a.snap.lang, 'mix');
+    assert.equal(a.snap.prefix.length, 2);
+    // la partie tourne bien avec le dictionnaire combiné : un mot inconnu est refusé
+    const me = a.you.id === a.snap.turn ? a : b;
+    me.send({ t: 'word', w: 'zzzz' });
+    await me.until((c) => c.snap.ev?.k === 'miss');
+    a.ws.close();
+    b.ws.close();
+  } finally {
+    srv.child.kill();
+  }
 });

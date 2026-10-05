@@ -137,7 +137,7 @@ b { font-weight: 700; }
 .pips i.off { background: none; border: 2px dashed var(--faint); }
 
 /* ---- salon ---- */
-.langs { margin: 0; padding: 0; border: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.langs { margin: 0; padding: 0; border: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
 .langs legend { grid-column: 1 / -1; margin-bottom: 10px; float: left; width: 100%; }
 .langs label { position: relative; display: block; padding: 12px 8px 10px; text-align: center; cursor: pointer; background: var(--card); border: var(--edge); border-radius: 5px; box-shadow: 3px 3px 0 var(--ink); transition: transform .07s, box-shadow .07s; }
 .langs input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
@@ -148,7 +148,7 @@ b { font-weight: 700; }
 .langs label:has(input:focus-visible) { outline: 3px solid var(--ink); outline-offset: 3px; }
 .langs.locked label { cursor: default; }
 .langs.locked input { cursor: default; }
-@media (max-width: 520px) { .langs { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .langs { grid-template-columns: repeat(2, 1fr); } .langs label:last-child { grid-column: 1 / -1; } }
 
 .start { margin-top: 22px; }
 .join { margin-top: 22px; }
@@ -184,6 +184,7 @@ b { font-weight: 700; }
 .words { margin: 0; padding: 0; list-style: none; max-height: 340px; overflow-y: auto; }
 .words li { display: flex; align-items: baseline; gap: 12px; padding: 7px 2px; border-bottom: 2px dashed var(--faint); }
 .words li:last-child { border-bottom: 0; }
+.words li.brk:not(:last-child) { border-bottom: 2px solid var(--ink); } /* la chaîne repart de nouvelles lettres */
 .words .n { flex: none; width: 2.4ch; color: var(--mute); font-weight: 700; font-size: .8rem; text-align: right; }
 .words .w { flex: 1; min-width: 0; font: 400 1.2rem/1.2 var(--slab); text-transform: uppercase; letter-spacing: .02em; overflow-wrap: anywhere; }
 .words .by { flex: none; max-width: 40%; color: var(--mute); font-size: .85rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

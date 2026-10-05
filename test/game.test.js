@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { Game, cleanName } from '../server/game.js';
-import { norm, fromText, has, show, open, loadDict } from '../server/dict.js';
+import { norm, fromText, has, show, open, loadDict, combine, randomStart } from '../server/dict.js';
 
 // Mini dictionnaire : chaque fin de mot ouvre au moins un mot, sauf "ux".
 const WORDS = ['maison', 'onde', 'dentelle', 'lecture', 'reste', 'tente', 'teste', 'ete', 'tenue', 'chaux', 'uxer', 'mare', 'rende'];
@@ -44,6 +44,29 @@ test('dictionnaire : recherche exacte et forme accentuée', () => {
   assert.ok(open(dict, 'on', 1) && !open(dict, 'zz', 1));
 });
 
+test('dictionnaires combinés : un mot est bon s’il existe dans l’un des deux', () => {
+  const a = fromText('maison\nchat');
+  const b = fromText('haus\nmaus\n\nhaus\thaüs');
+  const d = combine([a, b]);
+  assert.ok(has(d, 'maison') && has(d, 'haus') && !has(d, 'zzz'));
+  assert.equal(show(d, 'haus'), 'haüs');
+  assert.equal(show(d, 'chat'), 'chat');
+  assert.equal(d.size, 4);
+  assert.equal(d.links.get('ma'), 2); // maison + maus
+  assert.ok(open(d, 'ma', 2) && !open(d, 'ma', 3));
+  for (let i = 0; i < 20; i++) assert.ok(open(d, randomStart(d, 1), 1));
+});
+
+test('noms propres : acceptés, mais ils ne rouvrent pas les impasses', () => {
+  const names = fromText('ntcheu\nntungamo');
+  names.proper = true;
+  const d = combine([fromText('maison\nchat'), names]);
+  assert.ok(has(d, 'ntcheu')); // on peut jouer une ville
+  assert.ok(!open(d, 'nt', 1)); // mais "-nt" reste une impasse
+  assert.ok(open(d, 'ma', 1));
+  assert.equal(d.size, 4);
+});
+
 test('pseudos : nettoyés et dédoublonnés', () => {
   assert.equal(cleanName('  Léa \n  Dupont  '), 'Léa Dupont');
   assert.equal(cleanName('x'.repeat(40)).length, 16);
@@ -52,12 +75,14 @@ test('pseudos : nettoyés et dédoublonnés', () => {
   assert.deepEqual(g.join('t', '   '), { error: 'name' });
 });
 
-test('langue : seules les 4 langues sont acceptées', () => {
+test('langue : les 4 langues et le mode mix, rien d’autre', () => {
   const { g } = table();
   for (const bad of ['__proto__', 'constructor', 'toString', 'xx', 42, null]) g.setLang(bad);
   assert.equal(g.lang, 'fr');
   g.setLang('de');
   assert.equal(g.lang, 'de');
+  g.setLang('mix');
+  assert.equal(g.lang, 'mix');
 });
 
 test('il faut 2 joueurs connectés pour lancer', () => {
@@ -120,7 +145,37 @@ test('chaque refus coûte un essai ; au 5e, une vie en moins et au suivant', () 
   assert.equal(g.ev.k, 'life');
   assert.equal(g.ev.why, 'tries');
   assert.equal(g.ev.miss, 'unknown'); // la raison du dernier refus n'est pas perdue
-  assert.equal(g.prefix, 'ma'); // la chaîne ne bouge pas
+  assert.notEqual(g.prefix, 'ma'); // quelqu'un a raté : nouvelles lettres pour le suivant
+  assert.deepEqual(g.chain, []); // la chaîne, elle, n'a pas bougé
+});
+
+test('quelqu’un rate : nouvelles lettres tirées au sort, la chaîne marque la reprise', () => {
+  const g = begin();
+  play(g, 'maison');
+  assert.equal(g.prefix, 'on');
+  assert.equal(JSON.parse(g.json).fresh, false); // les lettres viennent du dernier mot
+  const random = Math.random;
+  Math.random = () => 0; // le tirage retombe sur le premier mot du dictionnaire : "ma"
+  try {
+    g.expire(); // le suivant n'a pas joué à temps
+  } finally {
+    Math.random = random;
+  }
+  assert.equal(g.prefix, 'ma');
+  assert.equal(JSON.parse(g.json).fresh, true); // lettres tirées au sort : le dernier mot ne leur est plus lié
+  assert.deepEqual(g.chain.map((c) => c.w), ['maison']); // les mots déjà joués restent
+  play(g, 'mare');
+  assert.equal(JSON.parse(g.json).fresh, false);
+  assert.deepEqual(JSON.parse(g.json).last.map((c) => c[2]), [1, 1]); // 1er mot de la partie, puis reprise après l'échec
+  play(g, 'rende');
+  assert.deepEqual(JSON.parse(g.json).last.map((c) => c[2]), [1, 1, 0]); // enchaîné normalement
+});
+
+test('un simple mot refusé ne change pas les lettres', () => {
+  const g = begin();
+  play(g, 'zzzzz');
+  assert.equal(g.prefix, 'ma');
+  assert.equal(g.left, 4);
 });
 
 test('raisons de refus', () => {
@@ -222,4 +277,45 @@ test('vrais dictionnaires', { skip: !fs.existsSync('data/fr.txt.gz') }, () => {
   const es = loadDict('data/es.txt.gz');
   assert.equal(show(es, 'nino'), 'niño');
   assert.ok(has(loadDict('data/en.txt.gz'), 'house'));
+});
+
+test('vrais dictionnaires : prénoms, pays, villes, mots composés', { skip: !fs.existsSync('data/names.txt.gz') }, () => {
+  const names = loadDict('data/names.txt.gz', true);
+  const [fr, en, es, de] = ['fr', 'en', 'es', 'de'].map((l) => loadDict(`data/${l}.txt.gz`));
+  const french = combine([fr, names]);
+  for (const w of ['marie', 'lea', 'mohamed', 'kevin', 'zinedine']) assert.ok(has(french, w), `prénom ${w}`);
+  for (const w of ['france', 'allemagne', 'etatsunis', 'cotedivoire', 'europe', 'japonais']) assert.ok(has(french, w), `pays/langue ${w}`);
+  for (const w of ['paris', 'londres', 'marseille', 'newyork']) assert.ok(has(french, w), `ville ${w}`);
+  for (const w of ['portemonnaie', 'abatjour', 'peutetre', 'aujourdhui']) assert.ok(has(french, w), `composé ${w}`);
+  assert.equal(show(french, 'etatsunis'), 'états-unis');
+  assert.ok(!has(french, 'germany'), 'pays en anglais : pas dans le dictionnaire français');
+  const mix = combine([fr, en, es, de, names]);
+  for (const w of ['germany', 'alemania', 'deutschland', 'allemagne', 'maison', 'house', 'casa', 'haus']) assert.ok(has(mix, w), `mix ${w}`);
+  assert.ok(!has(mix, 'qxzvw'));
+  assert.ok(open(mix, 'on', 30) && !open(mix, 'nt', 30));
+  // les 172 préfixes que les villes rouvriraient en français restent fermés
+  for (const p of ['nt', 'ez', 'ts', 'sz', 'ds']) assert.ok(!open(french, p, 30), `impasse ${p} (fr + noms propres)`);
+});
+
+test('mode mix : un mot de chacune des quatre langues, un prénom ou une ville sont acceptés', { skip: !fs.existsSync('data/names.txt.gz') }, () => {
+  const [fr, en, es, de] = ['fr', 'en', 'es', 'de'].map((l) => loadDict(`data/${l}.txt.gz`));
+  const names = loadDict('data/names.txt.gz', true);
+  const mix = combine([fr, en, es, de, names]);
+  for (const w of ['maison', 'house', 'casa', 'haus', 'paris', 'zinedine']) {
+    const g = new Game(() => mix, null);
+    g.join('a', 'Ana');
+    g.join('b', 'Bob');
+    g.start('a');
+    g.prefix = w.slice(0, 2);
+    play(g, w);
+    assert.deepEqual(g.chain.map((c) => c.w), [w], `« ${w} » devrait être accepté`);
+  }
+  // en mode français seul, un mot anglais est refusé
+  const g = new Game(() => combine([fr, names]), null);
+  g.join('a', 'Ana');
+  g.join('b', 'Bob');
+  g.start('a');
+  g.prefix = 'ho';
+  play(g, 'house');
+  assert.equal(g.ev.why, 'unknown');
 });

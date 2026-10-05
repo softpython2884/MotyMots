@@ -4,16 +4,19 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import { Game } from './game.js';
-import { loadDict } from './dict.js';
+import { combine, loadDict } from './dict.js';
 
 const ROOT = path.join(import.meta.dirname, '..');
 const PUBLIC = path.join(ROOT, 'public');
 const PORT = process.env.PORT === undefined ? 3000 : Number(process.env.PORT); // PORT=0 : un port libre (tests)
 const HOST = process.env.HOST || undefined; // 127.0.0.1 derrière nginx ; par défaut toutes les interfaces (jeu en réseau local)
 
-// Un dictionnaire n'est chargé (et gardé) qu'à la première partie dans sa langue.
+// Un fichier n'est chargé (et gardé) qu'à la première partie qui en a besoin.
+// Chaque langue est complétée par les noms propres (prénoms, villes) ; « mix » combine les quatre langues.
+const files = {};
+const file = (name) => (files[name] ??= loadDict(path.join(ROOT, 'data', `${name}.txt.gz`), name === 'names'));
 const dicts = {};
-const getDict = (lang) => (dicts[lang] ??= loadDict(path.join(ROOT, 'data', `${lang}.txt.gz`)));
+const getDict = (lang) => (dicts[lang] ??= combine((lang === 'mix' ? ['fr', 'en', 'es', 'de'] : [lang]).map(file).concat(file('names'))));
 
 const send = (ws, data) => ws.readyState === 1 && ws.bufferedAmount < 1e6 && ws.send(data);
 const wss = new WebSocketServer({ noServer: true, maxPayload: 512 });

@@ -1,7 +1,7 @@
 // MotyMots, côté navigateur. Le serveur envoie un instantané complet à chaque changement :
 // on garde le dernier et on l'affiche. Tout le texte passe par textContent (pas d'innerHTML).
 
-const LANGS = { fr: 'Français', en: 'English', es: 'Español', de: 'Deutsch' };
+const LANGS = { fr: 'Français', en: 'English', es: 'Español', de: 'Deutsch', mix: 'Les 4 langues' };
 const $ = (id) => document.getElementById(id);
 const node = (tag, cls, text) => {
   const e = document.createElement(tag);
@@ -134,7 +134,7 @@ function render(prev = S) {
 
   // sections
   $('secLobby').hidden = ph !== 'lobby' || !seated; // le choix de langue est réservé à ceux qui sont assis
-  $('secLast').hidden = ph !== 'playing' || S.total === 0;
+  $('secLast').hidden = ph !== 'playing' || S.total === 0 || S.fresh; // lettres tirées au sort : le dernier mot ne leur est plus lié
   $('secPlay').hidden = ph !== 'playing';
   $('secResult').hidden = ph !== 'over';
   $('join').hidden = seated || !!name;
@@ -250,8 +250,8 @@ function renderChain(prev) {
   $('wordsEmpty').hidden = S.total > 0;
   if (prev && prev !== S && prev.total === S.total && $('words').childElementCount) return;
   const fresh = prev && prev !== S && S.total === prev.total + 1;
-  const rows = S.last.slice().reverse().map(([w, by], i) => {
-    const li = node('li', fresh && i === 0 ? 'fresh' : '');
+  const rows = S.last.slice().reverse().map(([w, by, brk], i) => {
+    const li = node('li', [fresh && i === 0 && 'fresh', brk && 'brk'].filter(Boolean).join(' '));
     const word = node('span', 'w');
     word.append(marked(w, true, true));
     li.append(node('span', 'n', S.total - i), word, node('span', 'by', by));
@@ -377,6 +377,7 @@ function announce(e) {
       away: you ? 'Tu étais absent : tu perds une vie.' : `${e.who} a décroché : une vie en moins.`,
     }[e.why];
     text = why + base + (e.k === 'out' ? (you ? ' C’était ta dernière : tu sors de la partie.' : ` ${e.who} sort de la partie.`) : '');
+    if (S.phase === 'playing') text += ` Nouvelles lettres : ${S.prefix.toUpperCase()}.`;
     bad = you;
     sfx('life');
   }

@@ -24,4 +24,4 @@ SOFTWARE.
 
 Ce dépôt embarque des éléments tiers, qui gardent leur propre licence :
 - polices Alfa Slab One et Libre Franklin (SIL OFL 1.1) : public/fonts/*.LICENSE.txt
-- listes de mots : voir data/README.md
+- listes de mots (dont GeoNames, CC BY 4.0, et l'Insee, Licence Ouverte 2.0) : voir data/README.md

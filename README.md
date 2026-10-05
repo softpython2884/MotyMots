@@ -2,15 +2,16 @@
 
 [![CI](https://github.com/softpython2884/MotyMots/actions/workflows/ci.yml/badge.svg)](https://github.com/softpython2884/MotyMots/actions/workflows/ci.yml)
 
-Jeu de mots enchaînés, à plusieurs, dans le navigateur. Dictionnaires **français, anglais, espagnol, allemand**.
+Jeu de mots enchaînés, à plusieurs, dans le navigateur. Dictionnaires **français, anglais, espagnol, allemand**, ou **les quatre à la fois**.
 
 Un mot s'affiche. Tu en donnes un qui commence par ses **deux dernières lettres**, et ainsi de suite.
 
 - une seule table, une seule partie à la fois, autant de joueurs qu'on veut (on peut s'asseoir en cours de route)
 - **5 essais** et **30 secondes** par tour ; un mot refusé coûte un essai
-- à court d'essais ou de temps : **une vie en moins** (3 vies). Le dernier debout gagne
+- à court d'essais ou de temps : **une vie en moins** (3 vies), et **de nouvelles lettres** sont tirées au sort pour le suivant. Le dernier debout gagne
 - **saisie en direct** : tout le monde voit ce que tape le joueur dont c'est le tour, lettre par lettre (Entrée ou « Jouer » envoie le mot)
-- accents facultatifs, mots déjà joués refusés
+- accents, tirets et espaces facultatifs, mots déjà joués refusés
+- **prénoms, pays, villes** acceptés ; le mode **Les 4 langues** accepte un mot de n'importe laquelle
 - **impasse** : un mot qui finit par des lettres où plus rien ne commence (`-nt` en français) est refusé, sans coûter d'essai
 
 ## Lancer
@@ -68,24 +69,31 @@ seuil d'impasse... Le nombre de lettres de liaison est `LINK` dans `server/dict.
 
 ## Dictionnaires
 
-Les listes sont dans `data/*.txt.gz` (formes fléchies comprises, sans tirets ni apostrophes, 3 à 24 lettres) :
+Les listes sont dans `data/*.txt.gz` (formes fléchies comprises, mots composés « écrasés », 3 à 24 lettres) :
 
-| langue | mots | source | licence |
+| fichier | mots | contenu | source (licence) |
 |---|---|---|---|
-| fr | 319 000 | paquet npm `an-array-of-french-words` | MIT |
-| en | 275 000 | paquet npm `an-array-of-english-words` | MIT |
-| es | 635 000 | paquet npm `an-array-of-spanish-words` | MIT |
-| de | 659 000 | [enz/german-wordlist](https://github.com/enz/german-wordlist) | CC0 |
+| `fr` | 324 000 | mots courants + pays, continents et langues en français | paquet npm `an-array-of-french-words` (MIT) ; noms : Unicode CLDR |
+| `en` | 275 000 | idem en anglais | `an-array-of-english-words` (MIT) |
+| `es` | 635 000 | idem en espagnol | `an-array-of-spanish-words` (MIT) |
+| `de` | 660 000 | idem en allemand | [enz/german-wordlist](https://github.com/enz/german-wordlist) (CC0) |
+| `names` | 160 000 | prénoms et villes de plus de 15 000 habitants, valables dans toutes les langues | prénoms : [Insee](https://www.insee.fr/fr/statistiques/7633685) (Licence Ouverte 2.0), [smashew/NameDatabases](https://github.com/smashew/NameDatabases) (domaine public), [sigpwned/popular-names-by-country-dataset](https://github.com/sigpwned/popular-names-by-country-dataset) (CC0) ; villes : [GeoNames](https://www.geonames.org) (CC BY 4.0) |
 
-`npm run dicts` les reconstruit (réseau requis). Elles sont chargées à la demande, à la première partie dans la langue,
-et gardées en mémoire sous forme d'un simple texte : quelques Mo par langue.
+Une partie utilise une langue **plus** `names`, ou les quatre langues plus `names` en mode « Les 4 langues ».
+Les noms propres sont acceptés, mais ne comptent pas pour décider qu'une fin de mot est jouable : sans ça, des villes
+comme *Ntcheu* ou *Szeged* rouvriraient des impasses comme `-nt` ou `-sz`.
+
+`npm run dicts` les reconstruit (réseau, `npm`, `unzip` requis). Elles sont chargées à la demande, à la première partie qui
+en a besoin, et gardées en mémoire sous forme d'un simple texte : quelques Mo par langue.
 
 Les polices (Alfa Slab One, Libre Franklin) sont sous licence OFL, hébergées dans `public/fonts` avec leur licence.
-Voir aussi `data/README.md`.
+Détails et attributions dans `data/README.md`.
 
 ## Licence
 
 [MIT](LICENSE) © NightFury. Les polices et les listes de mots gardent leur propre licence (voir ci-dessus).
+
+Contient des données [GeoNames](https://www.geonames.org) (CC BY 4.0) et de l'[Insee](https://www.insee.fr) (Licence Ouverte 2.0).
 
 ## Structure
 
@@ -102,6 +110,9 @@ test/                  node --test : règles du jeu + parcours réel via WebSock
 ```
 
 ## Limites
+
+**Mémoire** : une langue seule tient dans une centaine de Mo ; le mode « Les 4 langues » charge les cinq listes d'un coup
+(≈ 0,4 s au lancement de la première partie dans ce mode, puis 150 à 250 Mo).
 
 C'est un jeu pour s'amuser entre amis, pas une application durcie : pas de comptes, pas de modération des pseudos,
 une seule table. Chaque changement renvoie l'état complet à tous les clients (≈ 3 Ko à 150 joueurs), ce qui est large

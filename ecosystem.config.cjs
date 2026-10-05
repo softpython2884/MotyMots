@@ -8,7 +8,7 @@ module.exports = {
       cwd: __dirname,
       instances: 1,
       exec_mode: 'fork',
-      max_memory_restart: '400M',
+      max_memory_restart: '600M', // le mode « 4 langues » charge cinq listes : 150 à 250 Mo
       time: true, // horodate les logs
       env: {
         NODE_ENV: 'production',
