@@ -8,7 +8,8 @@ import { loadDict } from './dict.js';
 
 const ROOT = path.join(import.meta.dirname, '..');
 const PUBLIC = path.join(ROOT, 'public');
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = process.env.PORT === undefined ? 3000 : Number(process.env.PORT); // PORT=0 : un port libre (tests)
+const HOST = process.env.HOST || undefined; // 127.0.0.1 derrière nginx ; par défaut toutes les interfaces (jeu en réseau local)
 
 // Un dictionnaire n'est chargé (et gardé) qu'à la première partie dans sa langue.
 const dicts = {};
@@ -150,5 +151,5 @@ setInterval(() => {
 }, 30_000).unref();
 setInterval(() => game.sweep(), 15_000).unref();
 
-server.listen(PORT, () => console.log(`MotyMots → http://localhost:${server.address().port}`));
+server.listen({ port: PORT, host: HOST }, () => console.log(`MotyMots → http://${HOST || 'localhost'}:${server.address().port}`));
 process.on('SIGTERM', () => process.exit(0));

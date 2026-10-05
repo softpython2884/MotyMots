@@ -2,17 +2,35 @@
   "name": "motymots",
   "version": "1.0.0",
   "description": "Jeu de mots enchaînés en multijoueur : fr, en, es, de.",
-  "type": "module",
+  "keywords": [
+    "game",
+    "word-chain",
+    "multiplayer",
+    "websocket",
+    "french"
+  ],
+  "homepage": "https://github.com/softpython2884/MotyMots#readme",
+  "bugs": {
+    "url": "https://github.com/softpython2884/MotyMots/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/softpython2884/MotyMots.git"
+  },
+  "license": "MIT",
+  "author": "NightFury <nightfury@nationquest.fr>",
   "private": true,
+  "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.11"
   },
   "scripts": {
     "start": "node server/index.js",
     "test": "node --test",
-    "dicts": "node scripts/build-dicts.mjs"
+    "dicts": "node scripts/build-dicts.mjs",
+    "prod": "pm2 startOrReload ecosystem.config.cjs --update-env && pm2 save",
+    "logs": "pm2 logs motymots"
   },
-  "license": "MIT",
   "dependencies": {
     "ws": "^8.22.0"
   }

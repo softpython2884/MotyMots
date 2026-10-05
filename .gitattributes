@@ -1,0 +1,4 @@
+# Les listes de mots sont binaires : pas de diff dans GitHub.
+data/*.gz binary
+* text=auto eol=lf
+*.woff2 binary
